@@ -1,6 +1,7 @@
 use nannou::image;
 use nannou::prelude::*;
 use num::Complex;
+use rayon::prelude::*;
 
 fn main() {
     nannou::app(model).view(view).run();
@@ -70,11 +71,21 @@ fn key_pressed(app: &App, model: &mut Model, key: Key) {
 }
 
 fn mandelbrot_image(center: (f64, f64), zoom: f64) -> image::DynamicImage {
-    image::DynamicImage::ImageRgb8(image::ImageBuffer::from_fn(
-        1024,
-        1024,
-        mandelbrot(512, 512, center, zoom),
-    ))
+    use nannou::image::Pixel;
+
+    let f = mandelbrot(512, 512, center, zoom);
+    let pixels: Vec<image::Rgb<u8>> = (0..512 * 512)
+        .into_par_iter()
+        .map(|i| ((i % 512) as u32, (i / 512) as u32))
+        .map(|(x, y)| f(x, y))
+        .collect();
+
+    let mut buffer: Vec<u8> = vec![0; 512 * 512 * 3];
+    for (pixel, dest) in pixels.into_iter().zip(buffer.chunks_mut(3)) {
+        dest.copy_from_slice(pixel.channels());
+    }
+
+    image::DynamicImage::ImageRgb8(image::ImageBuffer::from_vec(512, 512, buffer).unwrap())
 }
 
 enum MandelbrotResult {

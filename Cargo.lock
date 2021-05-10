@@ -1321,6 +1321,7 @@ version = "0.1.0"
 dependencies = [
  "nannou",
  "num 0.4.0",
+ "rayon",
  "toml",
 ]
 
